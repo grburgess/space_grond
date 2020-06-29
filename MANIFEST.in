@@ -1,0 +1,2 @@
+include versioneer.py
+include space_grond/_version.py
