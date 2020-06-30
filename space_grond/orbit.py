@@ -31,7 +31,7 @@ class Orbit(object):
         OmegaSun = -0.5 * np.pi
 
         # compute the inclination of the orbit
-        omega_sun = 2*np.pi / 365.2422/86400 * u.Unit("rad/s")
+        omega_sun = (2*np.pi / 365.2422/86400) * u.Unit("rad/s")
 
         arg = -(omega_sun * np.power(self.a/a_e, 7./2.) /
                 (1.5 * np.sqrt(GM/(a_e**3)) * J_2)).value
@@ -78,7 +78,14 @@ class Orbit(object):
 
         ut = self.u(t)
 
-        return self.a * np.array([np.cos(ut), np.sin(ut), [0] * len(ut)])
+        try:
+            z = [0] * len(ut)
+
+        except:
+
+            z = 0
+        
+        return self.a * np.array([np.cos(ut), np.sin(ut), z])
 
     def r_term(self, t):
         """
@@ -90,8 +97,15 @@ class Orbit(object):
 
         """
 
-        return (np.array([np.dot(self.pre_matrix, r) for r in self.r_orb(t).T]) * u.m).T
+        try:
+            len(t)
+        
+            return (np.array([np.dot(self.pre_matrix, r.to("m")) for r in self.r_orb(t).T])*u.m ).T
 
+        except:
+
+            return np.dot(self.pre_matrix, self.r_orb(t).to("m"))
+        
     def r_eci(self, time):
         """
         3D vector in the earth interial frame
@@ -111,7 +125,14 @@ class Orbit(object):
 
         # shift the coordinate system to the Sun moving frame
 
-        return (np.array([np.dot(self.R3(-a), r) for a, r in zip(a_sun, rt.T)]) * u.m).T
+        try:
+        
+            return (np.array([np.dot(self.R3(-a), r.to("m")) for a, r in zip(a_sun, rt.T)]) * u.m).T
+
+        except:
+
+            return np.dot(self.R3(-a_sun), rt.to("m"))
+            
 
     def r_ecef(self, time):
 
