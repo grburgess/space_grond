@@ -2,6 +2,7 @@ import astropy.coordinates as coord
 import astropy.time as astro_time
 import astropy.units as u
 import numpy as np
+import numba as nb
 
 a_e = 6378137 * u.m
 
@@ -24,6 +25,8 @@ class GRB(object):
         self.time = time
         self.coord = coord.SkyCoord(ra=ra, dec=dec, unit="deg", frame="icrs")
 
+        self.cart_position = ang2cart(ra,dec)
+
     def is_visible(self, orbit, time):
         """
         checks if the GRB is visible above the Earth limb
@@ -45,26 +48,23 @@ class GRB(object):
         horizon_angle += 28  # deg
 
         pos = orbit.r_eci(time).to("km")
+        return _is_visibile(pos.T, self.cart_position, horizon_angle, len(time))
 
-        is_visible = np.zeros(len(time), dtype=bool)
+@nb.njit(fastmath=True)
+def _is_visibile(sc_pos, grb_position, horizon_angle, N):
 
-        for i, (sc_pos, t) in enumerate(zip(pos.T, time)):
+    is_visible = np.zeros(N)
 
-            sat_coord = coord.SkyCoord(
-                x=-sc_pos[0],
-                y=-sc_pos[1],
-                z=-sc_pos[2],
-                frame="gcrs",
-                representation_type="cartesian",
-                obstime=t,
-            )
-            ang_sep = sat_coord.separation(self.coord).deg
+    for n in range(N):
+        ang_sep = np.rad2deg(get_ang(grb_position, -sc_pos[n]))
 
-            if ang_sep > horizon_angle:
-                is_visible[i] = 1
+        if ang_sep > horizon_angle:
 
-        return is_visible
+            is_visible[n] = 1
 
+    return is_visible
+    
+    
 
 class Observation(object):
     def __init__(self, grb, orbit, delay_time=15 * u.min):
@@ -184,6 +184,35 @@ class Observation(object):
 
         return output
 
+@nb.njit(fastmath=True)
+def ang2cart(ra, dec):
+    """
+    :param ra:
+    :param dec:
+    :return:
+    """
+    pos = np.zeros(3)
+    ra = np.deg2rad(ra)
+    dec = np.deg2rad(dec)
+
+    pos[0] = np.cos(dec) * np.cos(ra)
+    pos[1] = np.cos(dec) * np.sin(ra)
+    pos[2] = np.sin(dec)
+
+    return pos
+
+@nb.njit(fastmath=True)
+def get_ang(X1, X2):
+    """
+    :param X1:
+    :param X2:
+    :return:
+    """
+    norm1 = np.sqrt(X1.dot(X1))
+    norm2 = np.sqrt(X2.dot(X2))
+    #tmp = np.clip(np.dot(X1 / norm1, X2 / norm2), -1, 1)
+    tmp = np.dot(X1 / norm1, X2 / norm2)
+    return np.arccos(tmp)
 
 
 
