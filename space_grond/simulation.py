@@ -30,17 +30,31 @@ class GRBFactory(object):
 
 
 class Simulation(object):
-
-    def __init__(self, grbs, altitude, t0, u0, delay_time):
+    def __init__(
+        self,
+        grbs,
+        altitude,
+        t0,
+        u0,
+        delay_time,
+        max_waiting_time,
+        limb_angle=28,
+        sun_angle=None,
+        moon_angle=None,
+    ):
         """
         Create and run a simulation with a given set of initial conditions
         Be sure to specify units via astropy
 
         :param grbs: 
-        :param altitude: 
+        :param altitude: altitude in astropy km
         :param t0: 
         :param u0: 
-        :param delay_time: 
+        :param delay_time:
+        :param max_waiting_time: maximum time to wait before giving up observation 
+        :param limb_angle: distance from earth limb in deg
+        :param sun_angle: distance from sun in deg
+        :param moon_angle: distance from moon in deg
         :returns: 
         :rtype: 
 
@@ -52,7 +66,15 @@ class Simulation(object):
 
         for grb_name, grb in grbs.items():
 
-            obs = Observation(grb, orbit)
+            obs = Observation(
+                grb,
+                orbit,
+                delay_time,
+                max_waiting_time,
+                limb_angle,
+                sun_angle,
+                moon_angle,
+            )
 
             self._observations[grb_name] = obs
 
@@ -62,8 +84,40 @@ class Simulation(object):
         return self._observations
 
     @classmethod
-    def from_observation_file(cls, file_name, altitude, t0, u0, delay_time):
+    def from_observation_file(
+        cls,
+        file_name,
+        altitude,
+        t0,
+        u0,
+        delay_time,
+        max_waiting_time=200 * u.minute,
+        limb_angle=28,
+        sun_angle=None,
+        moon_angle=None,
+    ):
+        """
+
+        :param altitude: altitude in astropy km
+        :param t0: 
+        :param u0: 
+        :param delay_time: 
+        :param max_waiting_time: maximum time to wait before giving up observation
+        :param limb_angle: distance from earth limb in deg
+        :param sun_angle: distance from sun in deg
+        :param moon_angle: distance from moon in deg
+        """
 
         factory = GRBFactory(file_name, t0)
 
-        return cls(factory.grbs, altitude, t0, u0, delay_time)
+        return cls(
+            factory.grbs,
+            altitude,
+            t0,
+            u0,
+            delay_time,
+            max_waiting_time,
+            limb_angle,
+            sun_angle,
+            moon_angle,
+        )
