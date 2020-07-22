@@ -7,16 +7,30 @@ from space_grond.grb import GRB, Observation
 
 
 class GRBFactory(object):
-    def __init__(self, file_name, t0):
+    def __init__(self, file_name, t0=None):
 
-        self._day_string = t0.to_value("isot").split("T")[0]
+        if t0 is not None:
+
+            self._day_string = t0.to_value("isot").split("T")[0]
 
         self._grbs = {}
 
         grb_list = pd.read_table(file_name, names=["grb", "time", "ra", "dec"])
 
         for g in grb_list.iterrows():
-            utc = f"{self._day_string}T{g[1]['time']}"
+
+            if t0 is not None:
+
+                utc = f"{self._day_string}T{g[1]['time']}"
+
+            else:
+
+                tmp = g[1]["grb"][:6]
+
+                day_string = f"20{tmp[:2]}-{tmp[2:4]}-{tmp[-2:]}"
+
+                utc = f"{day_string}T{g[1]['time']}"
+                
             time = astro_time.Time(utc)
 
             grb = GRB(g[1]["ra"], g[1]["dec"], time)
@@ -108,7 +122,7 @@ class Simulation(object):
         :param moon_angle: distance from moon in deg
         """
 
-        factory = GRBFactory(file_name, t0)
+        factory = GRBFactory(file_name, t0=None)
 
         return cls(
             factory.grbs,
